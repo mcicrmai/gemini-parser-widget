@@ -11,24 +11,25 @@ export async function POST(req: Request) {
 
     const bytes = await file.arrayBuffer();
     const base64Data = Buffer.from(bytes).toString("base64");
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash-latest",
+    });
 
     const prompt = `
       You are a specialized Singapore Recruitment Parser. Extract data from this resume.
       RULES:
       1. Nationality: Use country name (e.g., India) EXCEPT for "Singaporean" or "Malaysian".
       2. Residency: Must be one of: [Citizen, Permanent Resident, Work Permit, S Pass, Employment Pass, Long Term Visit Pass, Student Pass, Dependant Pass].
-      3. Gender: [Male, Female].
-      4. Race: [Chinese, Malay, Indian, Eurasian, Punjabi, Filipino, Caucasian, Burmese, Thai, Bangladeshi, Sri Lankan, Japanese, Korean, Others].
-      5. Qualification: [O Level, A Level, Nitec, Higher Nitec, Diploma, Bachelor's Degree, Master's Degree, PhD, Professional Certificate, Others].
+      3. Qualification: Must be one of: [O Level, A Level, Nitec, Higher Nitec, Diploma, Bachelor's Degree, Master's Degree, PhD, Professional Certificate, Others].
+      4. Skills \u0026 Languages: Return as a comma-separated string, not an array.
 
-      RETURN ONLY A VALID JSON OBJECT WITH THIS STRUCTURE:
+      RETURN ONLY A VALID JSON OBJECT WITH THIS EXACT STRUCTURE:
       {
         "Name": "",
         "DateOfBirth": "",
         "Age": "",
-        "Gender": "",
-        "Race": "",
+        "Gender": "Male/Female",
+        "Race": "Chinese/Malay/Indian/Others",
         "Nationality": "",
         "Residency": "",
         "NoticePeriod": "",
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
 
     const cleanText = result.response
       .text()
-      .replace(/```json|```/g, "")
+      .replace(/\`\`\`json|\`\`\`/g, "")
       .trim();
     return NextResponse.json(JSON.parse(cleanText));
   } catch (error: unknown) {
