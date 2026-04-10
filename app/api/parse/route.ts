@@ -1,7 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// Initialize with your Paid Tier Key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
@@ -13,8 +12,8 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer();
     const base64Data = Buffer.from(bytes).toString("base64");
 
-    // CHANGED: Using the stable model name
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // UPDATED: Using Gemini 2.5 Flash based on your available models
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       You are a specialized Singapore Recruitment Parser. Extract data from this resume.
