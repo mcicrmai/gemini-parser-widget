@@ -6,8 +6,9 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const MODEL_CHAIN = [
   "gemini-2.0-flash-001",
   "gemini-2.0-flash",
-  "gemini-2.0-flash-lite-001",
+  "gemini-2.5-flash-lite",
 ];
+
 const PROMPT = `
   You are a specialized Singapore Recruitment Parser. Extract data from this resume.
   RULES:
