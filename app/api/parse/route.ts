@@ -1,62 +1,68 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// 1. Initialize Gemini with your Paid Tier Key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
-export async function GET() {
-  return NextResponse.json({
-    message: "Engine is Online. Use POST to upload.",
-  });
-}
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
+    if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-    }
-
-    // 2. Prepare file data for Gemini
     const bytes = await file.arrayBuffer();
     const base64Data = Buffer.from(bytes).toString("base64");
-
-    // 3. Use the latest Flash alias (Fixes the 404 error)
     const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
     const prompt = `
-      Extract info from this resume. Return ONLY a JSON object with: 
-      { "name": "", "email": "", "phone": "", "skills": [], "summary": "" }
+      You are a specialized Singapore Recruitment Parser. Extract data from this resume.
+      RULES:
+      1. Nationality: Use country name (e.g., India) EXCEPT for "Singaporean" or "Malaysian".
+      2. Residency: Must be one of: [Citizen, Permanent Resident, Work Permit, S Pass, Employment Pass, Long Term Visit Pass, Student Pass, Dependant Pass].
+      3. Gender: [Male, Female].
+      4. Race: [Chinese, Malay, Indian, Eurasian, Punjabi, Filipino, Caucasian, Burmese, Thai, Bangladeshi, Sri Lankan, Japanese, Korean, Others].
+      5. Qualification: [O Level, A Level, Nitec, Higher Nitec, Diploma, Bachelor's Degree, Master's Degree, PhD, Professional Certificate, Others].
+
+      RETURN ONLY A VALID JSON OBJECT WITH THIS STRUCTURE:
+      {
+        "Name": "",
+        "DateOfBirth": "",
+        "Age": "",
+        "Gender": "",
+        "Race": "",
+        "Nationality": "",
+        "Residency": "",
+        "NoticePeriod": "",
+        "Mobile": "",
+        "Email": "",
+        "ProfileSummary": "",
+        "Languages": "",
+        "Skills": "",
+        "LastDrawnSalary": "",
+        "ExpectedSalary": "",
+        "NearestMRTStation": "",
+        "Education": [
+          { "School": "", "Qualification": "", "Major": "", "Summary": "", "From": "", "To": "" }
+        ],
+        "WorkExperience": [
+          { "Company": "", "JobTitle": "", "Summary": [{ "Description": "" }], "LeavingReason": "", "From": "", "To": "" }
+        ],
+        "Address": { "PostalCode": "", "Floor": "", "UnitNumber": "" },
+        "OtherInformation": ""
+      }
     `;
 
     const result = await model.generateContent([
       prompt,
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType: file.type,
-        },
-      },
+      { inlineData: { data: base64Data, mimeType: file.type } },
     ]);
 
-    const response = await result.response;
-
-    // 4. Clean and parse JSON securely
-    const cleanText = response
+    const cleanText = result.response
       .text()
       .replace(/```json|```/g, "")
       .trim();
-
     return NextResponse.json(JSON.parse(cleanText));
   } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Internal Error";
-    console.error("API Error:", errorMessage);
-    return NextResponse.json(
-      { error: "Parsing failed", details: errorMessage },
-      { status: 500 },
-    );
+    const msg = error instanceof Error ? error.message : "Error";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
