@@ -1,18 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
-// 1. Initialize Gemini with your secret key from Vercel
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// 2. GET method so you can test the URL in a browser
 export async function GET() {
   return NextResponse.json({
-    status: "online",
-    message: "Gemini Parser Engine is running. Use POST to upload a file.",
+    message: "Engine is Online. Use POST to upload.",
   });
 }
 
-// 3. POST method for the actual resume parsing
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -22,16 +18,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Convert file to Base64 for Gemini
     const bytes = await file.arrayBuffer();
     const base64Data = Buffer.from(bytes).toString("base64");
 
-    // Use Gemini 2.0 Flash (Fastest for Paid Tier)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
-      Extract the following from this resume: name, email, phone, skills (array), and summary.
-      Return ONLY a clean JSON object. No markdown, no extra text.
+      Extract info from this resume. Return ONLY a JSON object with: 
+      { "name": "", "email": "", "phone": "", "skills": [], "summary": "" }
     `;
 
     const result = await model.generateContent([
@@ -45,18 +39,18 @@ export async function POST(req: Request) {
     ]);
 
     const response = await result.response;
-    let text = response.text();
 
-    // Clean the text to ensure it's valid JSON
-    text = text.replace(/```json|```/g, "").trim();
+    // Fixed: Cleaning the text and assigning to 'const' in one step
+    const cleanText = response
+      .text()
+      .replace(/```json|```/g, "")
+      .trim();
 
-    return NextResponse.json(JSON.parse(text));
+    return NextResponse.json(JSON.parse(cleanText));
   } catch (error: unknown) {
-    // FIXES THE "UNEXPECTED ANY" ERROR
     const errorMessage =
-      error instanceof Error ? error.message : "An unknown error occurred";
+      error instanceof Error ? error.message : "Internal Error";
     console.error("API Error:", errorMessage);
-
     return NextResponse.json(
       { error: "Parsing failed", details: errorMessage },
       { status: 500 },
