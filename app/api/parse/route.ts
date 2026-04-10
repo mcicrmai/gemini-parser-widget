@@ -4,9 +4,9 @@ import { NextResponse } from "next/server";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const MODEL_CHAIN = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
+  "gemini-2.0-flash-001", // Stable pinned version, fast
+  "gemini-2.0-flash", // Stable fallback
+  "gemini-2.0-flash-lite", // Lightweight last resort
 ];
 
 const PROMPT = `
@@ -72,7 +72,7 @@ async function tryModelWithRetry(
 
       if (!is503 || isLastAttempt) throw error;
 
-      const delayMs = 1000 * 2 ** attempt; // 1s, 2s, 4s
+      const delayMs = 1000 * 2 ** attempt; // 1s → 2s → 4s
       console.warn(
         `[${modelName}] 503 on attempt ${attempt + 1}, retrying in ${delayMs}ms...`,
       );
