@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+// Initialize with your Paid Tier Key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
@@ -11,17 +12,17 @@ export async function POST(req: Request) {
 
     const bytes = await file.arrayBuffer();
     const base64Data = Buffer.from(bytes).toString("base64");
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
-    });
+
+    // CHANGED: Using the stable model name
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
       You are a specialized Singapore Recruitment Parser. Extract data from this resume.
       RULES:
-      1. Nationality: Use country name (e.g., India) EXCEPT for "Singaporean" or "Malaysian".
+      1. Nationality: Use country name EXCEPT for "Singaporean" or "Malaysian".
       2. Residency: Must be one of: [Citizen, Permanent Resident, Work Permit, S Pass, Employment Pass, Long Term Visit Pass, Student Pass, Dependant Pass].
       3. Qualification: Must be one of: [O Level, A Level, Nitec, Higher Nitec, Diploma, Bachelor's Degree, Master's Degree, PhD, Professional Certificate, Others].
-      4. Skills \u0026 Languages: Return as a comma-separated string, not an array.
+      4. Skills & Languages: Return as a comma-separated string.
 
       RETURN ONLY A VALID JSON OBJECT WITH THIS EXACT STRUCTURE:
       {
@@ -59,11 +60,12 @@ export async function POST(req: Request) {
 
     const cleanText = result.response
       .text()
-      .replace(/\`\`\`json|\`\`\`/g, "")
+      .replace(/```json|```/g, "")
       .trim();
     return NextResponse.json(JSON.parse(cleanText));
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Error";
+    const msg =
+      error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
