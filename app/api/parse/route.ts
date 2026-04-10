@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
+// 1. Initialize Gemini with your Paid Tier Key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function GET() {
@@ -18,10 +19,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // 2. Prepare file data for Gemini
     const bytes = await file.arrayBuffer();
     const base64Data = Buffer.from(bytes).toString("base64");
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // 3. Use the latest Flash alias (Fixes the 404 error)
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
     const prompt = `
       Extract info from this resume. Return ONLY a JSON object with: 
@@ -40,7 +43,7 @@ export async function POST(req: Request) {
 
     const response = await result.response;
 
-    // Fixed: Cleaning the text and assigning to 'const' in one step
+    // 4. Clean and parse JSON securely
     const cleanText = response
       .text()
       .replace(/```json|```/g, "")
